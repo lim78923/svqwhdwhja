@@ -27,7 +27,7 @@ button{margin:5px;padding:10px;width:100%;}
 <p id="question"></p>
 <div id="options"></div>
 <p id="explanation" style="display:none;"></p>
-<button onclick="next()">下一题</button>
+<button id="nextBtn" onclick="next()">提交答案</button>
 </div>
 </div>
 
@@ -95,17 +95,105 @@ function choose(btn, val, answer, exp){
 }
 
 function next(){
- if(!answered) return alert("请先作答");
- index++;
- if(index>=list.length){
-   document.getElementById("app").style.display="none";
-   document.getElementById("result").style.display="block";
-   document.getElementById("score").innerText="得分："+score+" / "+list.length;
-   return;
+ if(!answered) return alert("请选择答案");
+ let q=list[index];
+
+ // 第一次点击:显示答案
+ if(!checked){
+   checked=true
+
+  let buttons=document.querySelectorAll("#options button")
+
+  buttons.forEach(b=>{
+    if(b.innerText.startsWith(q.answer)){
+      b.classList.add("correct");
+    }
+    if(b.innerText.startsWith(selected) && selected!==q.answer){
+      b.classList.add("wrong");
+    }
+  });
+
+  // 判分 + 记录错题(带去重 + 本地存储)
+  if(selected === q.answer){
+    score++;
+  }else{
+    let wrongList = JSON.parse(localStorage.getItem("wrongList")||"[]");
+
+   if(!wrongList.some(item=>item.question===q.question)){
+        wrongList.push(q);
+        localStorage.setItem("wrongList", JSON.stringify(wrongList));
+   }
  }
+
+  // 显示解析
+    let exp=document.getElementById("explanation");
+    exp.innerText="解析："+(q.explanation||"暂无解析");
+    exp.style.display="block";
+
+  // 按钮文字变化
+    document.getElementById("nextBtn").innerText="下一题";
+
+    return;
+  }
+
+ // 第二次点击：进入下一题
+  index++;
+  if(index>=list.length){
+    showResult();
+    return;
+  }
+
+  document.getElementById("nextBtn").innerText="提交答案";
+  render();
+}
  render();
 }
-</script>
+ let btn=document.createElement("button");
+btn.innerText="查看错题本";
+btn.onclick=showWrong;
+document.getElementById("result").appendChild(btn);
 
+ function showWrong(){
+  document.getElementById("result").style.display="none";
+  document.getElementById("wrongBox").style.display="block";
+
+  let wrongList = JSON.parse(localStorage.getItem("wrongList")||"[]");
+  let box=document.getElementById("wrongList");
+
+  box.innerHTML="";
+
+  if(wrongList.length===0){
+    box.innerHTML="<p>暂无错题 👍</p>";
+    return;
+  }
+
+  wrongList.forEach((q,i)=>{
+    let div=document.createElement("div");
+    div.style.border="1px solid #ddd";
+    div.style.margin="10px";
+    div.style.padding="10px";
+
+    div.innerHTML=`
+      <p>${i+1}. ${q.question}</p>
+      <p>正确答案：${q.answer}</p>
+      <p>解析：${q.explanation||"暂无解析"}</p>
+    `;
+
+    box.appendChild(div);
+  });
+}
+
+function clearWrong(){
+  localStorage.removeItem("wrongList");
+  alert("已清空错题本");
+  location.reload();
+}
+</script>
+<div id="wrongBox" style="display:none;">
+  <h2>错题本</h2>
+  <div id="wrongList"></div>
+  <button onclick="clearWrong()">清空错题本</button>
+  <button onclick="location.reload()">返回首页</button>
+</div>
 </body>
 </html>
