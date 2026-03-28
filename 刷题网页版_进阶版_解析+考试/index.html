@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>刷题系统Pro</title>
+<style>
+body{font-family:Arial;padding:20px;max-width:700px;margin:auto;}
+button{margin:5px;padding:10px;width:100%;}
+.card{border:1px solid #ddd;padding:15px;border-radius:10px;}
+.correct{background:#d4edda;}
+.wrong{background:#f8d7da;}
+</style>
+</head>
+<body>
+
+<h2>刷题系统 Pro</h2>
+
+<div>
+<button onclick="startPractice()">顺序刷题</button>
+<button onclick="startExam()">模拟考试（随机50题）</button>
+</div>
+
+<div id="app" style="display:none;">
+<div class="card">
+<h3 id="progress"></h3>
+<p id="question"></p>
+<div id="options"></div>
+<p id="explanation" style="display:none;"></p>
+<button onclick="next()">下一题</button>
+</div>
+</div>
+
+<div id="result" style="display:none;">
+<h2>考试完成</h2>
+<p id="score"></p>
+<button onclick="location.reload()">返回首页</button>
+</div>
+
+<script src="questions.js"></script>
+<script>
+let list=[], index=0, score=0, selected="", answered=false;
+
+function startPractice(){
+ list=[...questions];
+ start();
+}
+
+function startExam(){
+ list=[...questions].sort(()=>Math.random()-0.5).slice(0,50);
+ start();
+}
+
+function start(){
+ document.getElementById("app").style.display="block";
+ index=0;score=0;
+ render();
+}
+
+function render(){
+ let q=list[index];
+ answered=false;
+ selected="";
+ document.getElementById("progress").innerText=`第 ${index+1} 题 / 共 ${list.length} 题`;
+ document.getElementById("question").innerText=q.question;
+ document.getElementById("explanation").style.display="none";
+
+ let div=document.getElementById("options");
+ div.innerHTML="";
+ ["A","B","C","D"].forEach(o=>{
+   let b=document.createElement("button");
+   b.innerText=o+". "+(q.options[o]||"");
+   b.onclick=()=>choose(b,o,q.answer,q.explanation);
+   div.appendChild(b);
+ });
+}
+
+function choose(btn, val, answer, exp){
+ if(answered) return;
+ answered=true;
+
+ let buttons=document.querySelectorAll("#options button");
+ buttons.forEach(b=>{
+   if(b.innerText.startsWith(answer)) b.classList.add("correct");
+ });
+ if(val!==answer){
+   btn.classList.add("wrong");
+ } else {
+   score++;
+ }
+
+ let expDiv=document.getElementById("explanation");
+ expDiv.innerText="解析："+exp;
+ expDiv.style.display="block";
+}
+
+function next(){
+ if(!answered) return alert("请先作答");
+ index++;
+ if(index>=list.length){
+   document.getElementById("app").style.display="none";
+   document.getElementById("result").style.display="block";
+   document.getElementById("score").innerText="得分："+score+" / "+list.length;
+   return;
+ }
+ render();
+}
+</script>
+
+</body>
+</html>
