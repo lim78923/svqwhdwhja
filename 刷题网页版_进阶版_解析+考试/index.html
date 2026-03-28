@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>刷题系统Pro</title>
+<title>驾考刷题系统</title>
+
 <style>
 body{font-family:Arial;padding:20px;max-width:700px;margin:auto;}
 button{margin:5px;padding:10px;width:100%;}
@@ -11,27 +12,33 @@ button{margin:5px;padding:10px;width:100%;}
 .correct{background:#d4edda;}
 .wrong{background:#f8d7da;}
 .selected{background:#cce5ff;}
+.topbar button{width:auto;padding:8px 12px;}
 </style>
 </head>
+
 <body>
 
-<h2>刷题系统 Pro</h2>
+<h2>🚗 驾考刷题系统</h2>
 
-<div>
-<button onclick="startPractice()">顺序刷题</button>
-<button onclick="startExam()">模拟考试（随机50题）</button>
+<div class="topbar">
+<button onclick="startPractice()">顺序练习</button>
+<button onclick="startExam()">模拟考试</button>
+<button onclick="startWrong()">错题练习</button>
+<button onclick="showFavorites()">⭐ 收藏</button>
 </div>
 
 <div id="app" style="display:none;">
 <div class="card">
+
 <h3 id="progress"></h3>
 <p id="question"></p>
 <div id="options"></div>
 
-<!-- ✅ 初始隐藏 -->
 <p id="explanation" style="display:none;"></p>
 
+<button onclick="toggleFavorite()">⭐ 收藏本题</button>
 <button id="nextBtn" onclick="next()">提交答案</button>
+
 </div>
 </div>
 
@@ -41,22 +48,19 @@ button{margin:5px;padding:10px;width:100%;}
 <button onclick="location.reload()">返回首页</button>
 </div>
 
-<div id="wrongBox" style="display:none;">
-<h2>错题本</h2>
-<div id="wrongList"></div>
-<button onclick="clearWrong()">清空错题本</button>
+<div id="listPage" style="display:none;">
+<h2 id="listTitle"></h2>
+<div id="listContent"></div>
 <button onclick="location.reload()">返回首页</button>
 </div>
 
 <script src="questions.js"></script>
 <script>
 
-// ================= 状态变量 =================
 let list=[], index=0, score=0;
-let selected="";     // 当前选择
-let checked=false;   // 是否已判题
+let selected="", checked=false;
 
-// ================= 开始 =================
+// ===== 开始模式 =====
 function startPractice(){
  list=[...questions];
  start();
@@ -67,10 +71,21 @@ function startExam(){
  start();
 }
 
+function startWrong(){
+ let wrong=JSON.parse(localStorage.getItem("wrongList")||"[]");
+ if(wrong.length===0){
+   alert("暂无错题");
+   return;
+ }
+ list=wrong;
+ start();
+}
+
+// ===== 初始化 =====
 function start(){
  document.getElementById("app").style.display="block";
  document.getElementById("result").style.display="none";
- document.getElementById("wrongBox").style.display="none";
+ document.getElementById("listPage").style.display="none";
 
  index=0;
  score=0;
@@ -78,7 +93,7 @@ function start(){
  render();
 }
 
-// ================= 渲染题目 =================
+// ===== 渲染 =====
 function render(){
  let q=list[index];
 
@@ -88,7 +103,6 @@ function render(){
  document.getElementById("progress").innerText=`第 ${index+1} 题 / 共 ${list.length} 题`;
  document.getElementById("question").innerText=q.question;
 
- // ❌ 初始不显示答案解析
  let exp=document.getElementById("explanation");
  exp.style.display="none";
  exp.innerText="";
@@ -102,7 +116,6 @@ function render(){
    let b=document.createElement("button");
    b.innerText=o+". "+(q.options[o]||"");
 
-   // ✅ 点击只选中，不显示答案
    b.onclick=()=>{
      if(checked) return;
 
@@ -119,7 +132,7 @@ function render(){
  });
 }
 
-// ================= 提交/下一题 =================
+// ===== 提交答案 =====
 function next(){
 
  if(!selected){
@@ -129,7 +142,6 @@ function next(){
 
  let q=list[index];
 
- // ===== 第一次点击：显示答案 =====
  if(!checked){
    checked=true;
 
@@ -144,7 +156,6 @@ function next(){
      }
    });
 
-   // 判分 + 错题记录
    if(selected === q.answer){
      score++;
    } else {
@@ -156,17 +167,14 @@ function next(){
      }
    }
 
-   // ✅ 这里才显示答案和解析
    let exp=document.getElementById("explanation");
    exp.innerText = `正确答案：${q.answer}\n解析：${q.explanation||"暂无解析"}`;
    exp.style.display="block";
 
    document.getElementById("nextBtn").innerText="下一题";
-
    return;
  }
 
- // ===== 第二次点击：下一题 =====
  index++;
 
  if(index>=list.length){
@@ -177,42 +185,51 @@ function next(){
  render();
 }
 
-// ================= 成绩 =================
+// ===== 成绩 =====
 function showResult(){
  document.getElementById("app").style.display="none";
  document.getElementById("result").style.display="block";
 
  document.getElementById("score").innerText =
    "得分："+score+" / "+list.length;
-
- // 防重复按钮
- let oldBtn=document.getElementById("wrongBtn");
- if(oldBtn) oldBtn.remove();
-
- let btn=document.createElement("button");
- btn.id="wrongBtn";
- btn.innerText="查看错题本";
- btn.onclick=showWrong;
-
- document.getElementById("result").appendChild(btn);
 }
 
-// ================= 错题本 =================
-function showWrong(){
- document.getElementById("result").style.display="none";
- document.getElementById("wrongBox").style.display="block";
+// ===== 收藏 =====
+function toggleFavorite(){
+ let q=list[index];
+ let fav=JSON.parse(localStorage.getItem("favList")||"[]");
 
- let wrongList = JSON.parse(localStorage.getItem("wrongList")||"[]");
- let box=document.getElementById("wrongList");
-
- box.innerHTML="";
-
- if(wrongList.length===0){
-   box.innerHTML="<p>暂无错题 👍</p>";
+ if(fav.some(item=>item.question===q.question)){
+   alert("已收藏");
    return;
  }
 
- wrongList.forEach((q,i)=>{
+ fav.push(q);
+ localStorage.setItem("favList", JSON.stringify(fav));
+ alert("收藏成功 ⭐");
+}
+
+function showFavorites(){
+ let fav=JSON.parse(localStorage.getItem("favList")||"[]");
+ showList("收藏题目", fav);
+}
+
+// ===== 通用列表页 =====
+function showList(title, arr){
+ document.getElementById("app").style.display="none";
+ document.getElementById("listPage").style.display="block";
+
+ document.getElementById("listTitle").innerText=title;
+
+ let box=document.getElementById("listContent");
+ box.innerHTML="";
+
+ if(arr.length===0){
+   box.innerHTML="<p>暂无内容</p>";
+   return;
+ }
+
+ arr.forEach((q,i)=>{
    let div=document.createElement("div");
    div.style.border="1px solid #ddd";
    div.style.margin="10px";
@@ -220,19 +237,12 @@ function showWrong(){
 
    div.innerHTML=`
      <p>${i+1}. ${q.question}</p>
-     <p>正确答案：${q.answer}</p>
+     <p>答案：${q.answer}</p>
      <p>解析：${q.explanation||"暂无解析"}</p>
    `;
 
    box.appendChild(div);
  });
-}
-
-// ================= 清空错题 =================
-function clearWrong(){
- localStorage.removeItem("wrongList");
- alert("已清空错题本");
- location.reload();
 }
 
 </script>
