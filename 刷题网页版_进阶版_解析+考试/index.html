@@ -10,6 +10,7 @@ button{margin:5px;padding:10px;width:100%;}
 .card{border:1px solid #ddd;padding:15px;border-radius:10px;}
 .correct{background:#d4edda;}
 .wrong{background:#f8d7da;}
+.selected{background:#cce5ff;}
 </style>
 </head>
 <body>
@@ -26,7 +27,10 @@ button{margin:5px;padding:10px;width:100%;}
 <h3 id="progress"></h3>
 <p id="question"></p>
 <div id="options"></div>
+
+<!-- ✅ 初始隐藏 -->
 <p id="explanation" style="display:none;"></p>
+
 <button id="nextBtn" onclick="next()">提交答案</button>
 </div>
 </div>
@@ -47,22 +51,22 @@ button{margin:5px;padding:10px;width:100%;}
 <script src="questions.js"></script>
 <script>
 
+// ================= 状态变量 =================
 let list=[], index=0, score=0;
-let selected="", checked=false;
+let selected="";     // 当前选择
+let checked=false;   // 是否已判题
 
-// 开始顺序
+// ================= 开始 =================
 function startPractice(){
  list=[...questions];
  start();
 }
 
-// 模拟考试
 function startExam(){
  list=[...questions].sort(()=>Math.random()-0.5).slice(0,50);
  start();
 }
 
-// 初始化
 function start(){
  document.getElementById("app").style.display="block";
  document.getElementById("result").style.display="none";
@@ -70,18 +74,25 @@ function start(){
 
  index=0;
  score=0;
+
  render();
 }
 
-// 渲染题目
+// ================= 渲染题目 =================
 function render(){
  let q=list[index];
+
  selected="";
  checked=false;
 
  document.getElementById("progress").innerText=`第 ${index+1} 题 / 共 ${list.length} 题`;
  document.getElementById("question").innerText=q.question;
- document.getElementById("explanation").style.display="none";
+
+ // ❌ 初始不显示答案解析
+ let exp=document.getElementById("explanation");
+ exp.style.display="none";
+ exp.innerText="";
+
  document.getElementById("nextBtn").innerText="提交答案";
 
  let div=document.getElementById("options");
@@ -91,28 +102,34 @@ function render(){
    let b=document.createElement("button");
    b.innerText=o+". "+(q.options[o]||"");
 
+   // ✅ 点击只选中，不显示答案
    b.onclick=()=>{
      if(checked) return;
+
      selected=o;
 
      document.querySelectorAll("#options button").forEach(btn=>{
-       btn.style.background="";
+       btn.classList.remove("selected");
      });
 
-     b.style.background="#cce5ff";
+     b.classList.add("selected");
    };
 
    div.appendChild(b);
  });
 }
 
-// 下一步逻辑
+// ================= 提交/下一题 =================
 function next(){
- if(!selected) return alert("请选择答案");
+
+ if(!selected){
+   alert("请选择答案");
+   return;
+ }
 
  let q=list[index];
 
- // 第一次点击：显示答案
+ // ===== 第一次点击：显示答案 =====
  if(!checked){
    checked=true;
 
@@ -139,16 +156,17 @@ function next(){
      }
    }
 
-   // 显示解析
+   // ✅ 这里才显示答案和解析
    let exp=document.getElementById("explanation");
-   exp.innerText="解析："+(q.explanation||"暂无解析");
+   exp.innerText = `正确答案：${q.answer}\n解析：${q.explanation||"暂无解析"}`;
    exp.style.display="block";
 
    document.getElementById("nextBtn").innerText="下一题";
+
    return;
  }
 
- // 第二次点击：下一题
+ // ===== 第二次点击：下一题 =====
  index++;
 
  if(index>=list.length){
@@ -159,7 +177,7 @@ function next(){
  render();
 }
 
-// 显示结果
+// ================= 成绩 =================
 function showResult(){
  document.getElementById("app").style.display="none";
  document.getElementById("result").style.display="block";
@@ -167,7 +185,7 @@ function showResult(){
  document.getElementById("score").innerText =
    "得分："+score+" / "+list.length;
 
- // 防止重复按钮
+ // 防重复按钮
  let oldBtn=document.getElementById("wrongBtn");
  if(oldBtn) oldBtn.remove();
 
@@ -179,7 +197,7 @@ function showResult(){
  document.getElementById("result").appendChild(btn);
 }
 
-// 错题本
+// ================= 错题本 =================
 function showWrong(){
  document.getElementById("result").style.display="none";
  document.getElementById("wrongBox").style.display="block";
@@ -210,7 +228,7 @@ function showWrong(){
  });
 }
 
-// 清空错题
+// ================= 清空错题 =================
 function clearWrong(){
  localStorage.removeItem("wrongList");
  alert("已清空错题本");
